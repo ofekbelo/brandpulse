@@ -1,0 +1,152 @@
+version: '3.8'
+
+services:
+  # MongoDB Service
+  mongodb:
+    image: mongo:5.0
+    container_name: brandpulse-mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./docker/volumes/mongodb:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password}
+    networks:
+      - brandpulse-network
+
+  # MongoDB Express Web Interface
+  mongo-express:
+    image: mongo-express:latest
+    container_name: brandpulse-mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USERNAME:-admin}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:-password}
+      ME_CONFIG_MONGODB_SERVER: mongodb
+    depends_on:
+      - mongodb
+    networks:
+      - brandpulse-network
+
+  # Zookeeper Service
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: brandpulse-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - ./docker/volumes/zookeeper/data:/var/lib/zookeeper/data
+      - ./docker/volumes/zookeeper/log:/var/lib/zookeeper/log
+    networks:
+      - brandpulse-network
+
+  # Kafka Service
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: brandpulse-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - ./docker/volumes/kafka/data:/var/lib/kafka/data
+    networks:
+      - brandpulse-network
+
+  # Kafka UI
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: brandpulse-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: brandpulse
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - brandpulse-network
+
+  # Kafka Services (optional - can also be run separately)
+  kafka-services:
+    build:
+      context: ./kafka
+      dockerfile: Dockerfile
+    container_name: brandpulse-kafka-services
+    restart: always
+    environment:
+      NODE_ENV: development
+      KAFKA_BROKERS: kafka:9092
+    depends_on:
+      - kafka
+      - mongodb
+    networks:
+      - brandpulse-network
+
+  # Backend Service
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: brandpulse-server
+    restart: always
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+      MONGO_URI: mongodb://admin:password@mongodb:27017/brandpulse?authSource=admin
+      KAFKA_BROKERS: kafka:9092
+      SERVER_PORT: 4000
+    depends_on:
+      - mongodb
+      - kafka
+    networks:
+      - brandpulse-network
+
+  # Frontend Service
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: brandpulse-client
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+      REACT_APP_API_URL: http://localhost:4000
+    depends_on:
+      - server
+    networks:
+      - brandpulse-network
+
+networks:
+  brandpulse-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  kafka_data:
+  zookeeper_data:

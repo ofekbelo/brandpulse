@@ -1,0 +1,82 @@
+@import "variables";
+@import "mixins";
+
+// Reset & Base Styles
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body {
+	font-family: $font-family-base;
+	font-size: $font-size-base;
+	line-height: $line-height-base;
+	color: $text-color;
+	background-color: $background-color;
+}
+
+a {
+	text-decoration: none;
+	color: $primary-color;
+	@include transition;
+
+	&:hover {
+		color: darken($primary-color, 15%);
+	}
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-family: $font-family-heading;
+	margin-bottom: $spacing-md;
+}
+
+h1 {
+	@include heading(h1);
+}
+h2 {
+	@include heading(h2);
+}
+h3 {
+	@include heading(h3);
+}
+h4 {
+	@include heading(h4);
+}
+h5 {
+	@include heading(h5);
+}
+h6 {
+	@include heading(h6);
+}
+
+p {
+	margin-bottom: $spacing-md;
+}
+
+button {
+	cursor: pointer;
+	border: none;
+	background: none;
+	font-family: inherit;
+}
+
+.container {
+	width: 100%;
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 0 $spacing-md;
+}
+
+.card {
+	@include card;
+	margin-bottom: $spacing-lg;
+}
+
+// Import component styles here as needed
+// @import '../components/ComponentName/ComponentName.scss';
