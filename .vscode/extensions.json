@@ -1,0 +1,11 @@
+{
+    "recommendations": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker",
+        "mongodb.mongodb-vscode",
+        "eamodio.gitlens",
+        "mrmlnc.vscode-scss",
+        "dsznajder.es7-react-js-snippets"
+    ]
+}
